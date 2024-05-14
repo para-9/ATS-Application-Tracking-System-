@@ -1,0 +1,54 @@
+import streamlit as st
+from dotenv import load_dotenv
+import os
+import PyPDF2 as pdf
+import google.generativeai as genai
+
+# Load environment variables
+load_dotenv()
+
+# Configure Google Generative AI
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# Function to get response from Gemini Pro model
+def get_gemini_response(input_text):
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content(input_text)
+    return response.text
+
+# Function to extract text from PDF file
+def extract_text_from_pdf(uploaded_file):
+    reader = pdf.PdfReader(uploaded_file)
+    text = ""
+    for page in reader.pages:
+        text += page.extract_text()
+    return text
+
+# Streamlit UI
+def main():
+    st.title("Smart ATS")
+    st.text("Improving your Resume ATS")
+    jd = st.text_area("Paste the Job Description")
+    uploaded_file = st.file_uploader("Upload your Resume", type="pdf", help="Please upload a PDF file")
+
+    if st.button("Submit") and jd and uploaded_file:
+        text = extract_text_from_pdf(uploaded_file)
+        input_prompt = f"""
+            Hey, act like a skilled or very experienced ATS (Application Tracking System) with deep understanding of the tech field, including Software Engineering, Data Science, Data Analysis, and Big Data Engineering.
+            Your task is to evaluate the resume based on the given job description. Consider the job market is very competitive and you should provide the best assistance for improving the resume.
+            Assign the percentage matching based on Job Description and the missing keywords with high accuracy.
+
+            Resume:
+            {text}
+
+            Description:
+            {jd}
+            
+            I want the response in one single string having structure:
+            {{"JD Match": "%", "Missing keywords": [], "Profile Summary": ""}}
+        """
+        response = get_gemini_response(input_prompt)
+        st.subheader(response)
+
+if __name__ == "__main__":
+    main()
